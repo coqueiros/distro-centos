@@ -1,0 +1,158 @@
+#BIND : Configure for Internal Network
+	
+1.Install BIND to Configure DNS (Domain Name System) Server to provide Name or Address Resolution service for Clients.
+
+#Install BIND.
+dnf -y install bind bind-utils
+
+#Se o dnsmasq ainda não estiver instalado, instale-o com o seguinte comando
+sudo yum install dnsmasq -y
+
+2. Configurar o /etc/dnsmasq.conf
+Edite o arquivo de configuração do dnsmasq localizado em /etc/dnsmasq.conf. As configurações mínimas necessárias para seu caso são:
+
+# Especifica a interface de rede que o dnsmasq irá escutar
+interface=ens160
+
+# Ativa a resolução local de nomes de hosts
+expand-hosts
+domain=rgl.local
+
+# Define o arquivo de hosts local (resolução de nomes para IPs)
+addn-hosts=/etc/dnsmasq.hosts
+
+# Habilita DNS reverso para o intervalo de IPs da sua rede
+ptr-record=166.232.168.192.in-addr.arpa,server.local
+
+# Forwarders para resolver nomes externos
+server=8.8.8.8
+server=8.8.4.4
+
+3. Configurar os hosts no arquivo /etc/dnsmasq.hosts
+Crie ou edite o arquivo /etc/dnsmasq.hosts para incluir os mapeamentos entre IPs e nomes de hosts.
+192.168.232.166 server.local
+
+Este arquivo será usado pelo dnsmasq para resolver o nome server.local para o IP 192.168.232.166 e vice-versa.
+
+4. Verificar as configurações de rede (opcional)
+Verifique se a interface de rede ens160 está configurada corretamente. Execute:
+ip addr show ens160
+
+Isso mostrará as configurações atuais da interface, como o IP 192.168.232.166, que já está visível no seu exemplo.
+
+5. Reiniciar o dnsmasq
+Após fazer as alterações, reinicie o serviço do dnsmasq:
+sudo systemctl restart dnsmasq
+sudo systemctl enable dnsmasq
+
+6. Testar a configuração
+Agora, você pode testar a resolução de nomes com o dig:
+
+Para consultas de DNS direto (resolver o nome do servidor a partir do IP):
+dig -x 192.168.232.166
+
+Isso deverá retornar server.local.
+
+Para consultas de DNS direto a partir do nome (resolver o IP do nome):
+dig server.local
+
+7. Verificar as configurações de DNS locais
+Certifique-se de que o seu arquivo /etc/resolv.conf tem 192.168.232.166 como servidor DNS (ou 192.168.232.2, dependendo da sua configuração de rede).
+nameserver 192.168.232.166
+
+Assim, a máquina utilizará o dnsmasq local para resolver os nomes e IPs.
+
+Esses passos devem permitir que você resolva tanto o nome do host quanto faça consultas reversas corretamente.
+
+# ########################################################################################################
+# O erro NXDOMAIN indica que o servidor DNS não conseguiu encontrar um registro PTR para o IP solicitado, o que significa que a configuração de DNS reverso ainda não está funcionando corretamente.
+
+1. Verifique o arquivo /etc/dnsmasq.conf
+Certifique-se de que o arquivo de configuração do dnsmasq contém a linha correta para o registro PTR:
+
+Essa linha é crucial para mapear o IP 192.168.232.166 para o nome server.local.
+
+2. Reinicie o serviço dnsmasq
+Após fazer as alterações, reinicie o serviço dnsmasq
+sudo systemctl restart dnsmasq
+
+3. Verifique se o dnsmasq está escutando na porta correta
+Use o comando abaixo para verificar se o dnsmasq está rodando e escutando na porta 53:
+sudo ss -lntp | grep 53
+
+[root@rgl Rocky_Linux]# sudo ss -lntp | grep 53
+LISTEN 0      32     192.168.122.1:53        0.0.0.0:*    users:(("dnsmasq",pid=1806,fd=6)) 
+##################
+
+SOLUÇÃO:Ajustar a configuração para a interface correta
+Edite o arquivo de configuração do dnsmasq:
+Abra o arquivo /etc/dnsmasq.conf e adicione ou edite a linha da interface para garantir que o dnsmasq escute na interface correta (ens160)
+interface=ens160
+
+Nota:Se você quiser que o dnsmasq escute em todas as interfaces, você pode usar:
+bind-interfaces
+
+Reinicie o dnsmasq:
+Após editar o arquivo, reinicie o serviço:
+sudo systemctl restart dnsmasq
+
+Verifique novamente se o dnsmasq está escutando na interface correta:
+Execute novamente o comando para confirmar se ele agora está escutando na interface ens160:
+sudo ss -lntp | grep 53
+
+Você deve ver uma linha que mostra o dnsmasq escutando na interface 192.168.232.166:53. Se estiver correto, tente novamente a consulta reversa
+dig -x 192.168.232.166
+
+Próximos passos:
+Verifique o processo duplicado de dnsmasq (opcional): Se não precisar do outro processo dnsmasq na interface 192.168.122.1, você pode parar o serviço responsável por ele (provavelmente libvirtd)
+sudo systemctl stop libvirtd
+
+Ou, se não for necessário, desative o dnsmasq de libvirt nas configurações da rede virtual:
+Resumo do que foi feito:
+Configuração correta do dnsmasq para escutar na interface e no IP apropriados.
+Adição do registro PTR no arquivo /etc/dnsmasq.conf para resolver o IP para o nome server.local.
+Ajuste do arquivo /etc/resolv.conf para apontar para o servidor DNS correto (o dnsmasq local).
+Reinício do serviço dnsmasq e teste bem-sucedido de resolução de nomes.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

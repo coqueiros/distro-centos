@@ -1,0 +1,42 @@
+[root@aolua master]# dnf -y install chrony
+Last metadata expiration check: 0:52:44 ago on Mon 09 Sep 2024 05:43:14 AM EDT.
+Package chrony-4.5-1.el8.x86_64 is already installed.
+Dependencies resolved.
+Nothing to do.
+Complete!
+
+[root@aolua master]# vi /etc/chrony.conf
+[root@aolua master]# systemctl enable --now chronyd
+[root@aolua master]# firewall-cmd --add-service=ntp
+FirewallD is not running
+
+[root@aolua master]# firewall-cmd --runtime-to-permanent
+FirewallD is not running
+
+[root@aolua master]# chronyc sources
+MS Name/IP address         Stratum Poll Reach LastRx Last sample
+===============================================================================
+^+ customer.ipworld.network      2   7   377    58    +29ms[  +29ms] +/-  136ms
+^+ 196.49.6.67                   2   7   377    57    +20ms[  +20ms] +/-  111ms
+^* time.cloudflare.com           3   6   377    57    -19ms[  -19ms] +/-   91ms
+^+ time.cloudflare.com           3   7   377    57    -19ms[  -19ms] +/-   91ms
+[root@aolua master]#
+
+
+[root@dlp ~]# vi /etc/ssh/sshd_config
+# line 43 : change ( prohibit root login )
+# for other options, there are [prohibit-password], [forced-commands-only]
+PermitRootLogin no
+
+[root@dlp ~]# systemctl restart sshd
+
+[root@aolua master]# ssh master@aolua.rgl.local
+The authenticity of host 'aolua.rgl.local (192.168.232.199)' can't be established.
+ECDSA key fingerprint is SHA256:B9nW5bvkw6RbXonpxpQvcMGAeuPN8Hy59uz669JTdaQ.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'aolua.rgl.local,192.168.232.199' (ECDSA) to the list of known hosts.
+master@aolua.rgl.local's password:
+Web console: https://aolua.rgl.local:9090/ or https://192.168.232.199:9090/
+
+Last login: Mon Sep  9 06:13:07 2024 from 192.168.232.1
+[master@aolua ~]$

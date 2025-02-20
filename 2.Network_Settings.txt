@@ -1,0 +1,479 @@
+Initial Settings : Network Settings2021/12/16
+ 	
+If you did not configure networking during the CentOS Stream installation, Configure it like follows.
+
+1.To set static IP address to the server, Modify settings like follows.
+( Replace the interface name [enp1s0] to your own one because it's not the same on any System )
+
+# if you did not set HostName, set it like follows
+[root@localhost ~]# hostnamectl set-hostname dlp.srv.world
+# display devices
+[root@localhost ~]# nmcli device
+DEVICE  TYPE      STATE      CONNECTION
+enp1s0  ethernet  connected  enp1s0
+lo      loopback  unmanaged  --
+
+# set IPv4 address
+[root@localhost ~]# nmcli connection modify enp1s0 ipv4.addresses 10.0.0.30/24
+# set gateway
+[root@localhost ~]# nmcli connection modify enp1s0 ipv4.gateway 10.0.0.1
+# set DNS
+# for multiple DNS, specify with space separated ⇒ ipv4.dns "10.0.0.10 10.0.0.11 10.0.0.12"
+[root@localhost ~]# nmcli connection modify enp1s0 ipv4.dns 10.0.0.10
+# set DNS search base (your domain name -for multiple one, specify with space separated)
+[root@localhost ~]# nmcli connection modify enp1s0 ipv4.dns-search srv.world
+# set [manual] for static setting (it's [auto] for DHCP)
+[root@localhost ~]# nmcli connection modify enp1s0 ipv4.method manual
+# restart the interface to reload settings
+[root@localhost ~]# nmcli connection down enp1s0; nmcli connection up enp1s0
+Connection 'enp1s0' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/1)
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/2)
+
+# confirm settings
+[root@localhost ~]# nmcli device show enp1s0
+GENERAL.DEVICE:                         enp1s0
+GENERAL.TYPE:                           ethernet
+GENERAL.HWADDR:                         52:54:00:DF:87:AD
+GENERAL.MTU:                            1500
+GENERAL.STATE:                          100 (connected)
+GENERAL.CONNECTION:                     enp1s0
+GENERAL.CON-PATH:                       /org/freedesktop/NetworkManager/ActiveC>
+WIRED-PROPERTIES.CARRIER:               on
+IP4.ADDRESS[1]:                         10.0.0.30/24
+IP4.GATEWAY:                            10.0.0.1
+IP4.ROUTE[1]:                           dst = 10.0.0.0/24, nh = 0.0.0.0, mt = 1>
+IP4.ROUTE[2]:                           dst = 0.0.0.0/0, nh = 10.0.0.1, mt = 100
+IP4.DNS[1]:                             10.0.0.10
+IP4.SEARCHES[1]:                        srv.world
+IP6.ADDRESS[1]:                         fe80::5054:ff:fedf:87ad/64
+IP6.GATEWAY:                            --
+IP6.ROUTE[1]:                           dst = fe80::/64, nh = ::, mt = 100
+
+# confirm state
+[root@localhost ~]# ip address show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:df:87:ad brd ff:ff:ff:ff:ff:ff
+    inet 10.0.0.30/24 brd 10.0.0.255 scope global noprefixroute enp1s0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fedf:87ad/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever
+
+2.If you don't need IPv6, it's possible to disable it like follows.
+# disable IPv6
+[root@localhost ~]# grubby --update-kernel ALL --args ipv6.disable=1
+# verify kernel parameters
+[root@localhost ~]# grubby --info DEFAULT
+index=0 kernel="/boot/vmlinuz-5.14.0-17.el9.x86_64" args="ro crashkernel=1G-4G:192M,4G-64G:256M,64G-:512M resume=/dev/mapper/cs-swap rd.lvm.lv=cs/root rd.lvm.lv=cs/swap console=ttyS0,115200n8 selinux=0 ipv6.disable=1" root="/dev/mapper/cs-root" initrd="/boot/initramfs-5.14.0-17.el9.x86_64.img" title="CentOS Stream (5.14.0-17.el9.x86_64) 9" id="ab414d4792d04b9dbc1e2361f936e849-5.14.0-17.el9.x86_64"
+[root@localhost ~]# reboot
+[root@localhost ~]# ip address show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:df:87:ad brd ff:ff:ff:ff:ff:ff
+    inet 10.0.0.30/24 brd 10.0.0.255 scope global noprefixroute enp1s0
+       valid_lft forever preferred_lft forever
+
+# if falling back to enable, run like follows
+[root@localhost ~]# grubby --update-kernel ALL --remove-args ipv6.disable
+
+####################################
+Initial Settings : Configure Services
+#####################################
+To enable or disable services, Configure like follows.
+
+1.Display services list.
+# the list of services that are active now
+[root@dlp ~]# systemctl -t service
+  UNIT                               LOAD   ACTIVE SUB     DESCRIPTION         >
+  atd.service                        loaded active running Deferred execution s>
+  auditd.service                     loaded active running Security Auditing Se>
+  chronyd.service                    loaded active running NTP client/server
+  crond.service                      loaded active running Command Scheduler
+  dbus-broker.service                loaded active running D-Bus System Message>
+  dracut-shutdown.service            loaded active exited  Restore /run/initram>
+  fprintd.service                    loaded active running Fingerprint Authenti>
+
+.....
+.....
+
+  systemd-vconsole-setup.service     loaded active exited  Setup Virtual Console
+  user-runtime-dir@0.service         loaded active exited  User Runtime Directo>
+  user@0.service                     loaded active running User Manager for UID>
+
+LOAD   = Reflects whether the unit definition was properly loaded.
+ACTIVE = The high-level unit activation state, i.e. generalization of SUB.
+SUB    = The low-level unit activation state, values depend on unit type.
+45 loaded units listed. Pass --all to see loaded but inactive units, too.
+To show all installed unit files use 'systemctl list-unit-files'.
+
+# list of all services
+[root@dlp ~]# systemctl list-unit-files -t service
+UNIT FILE                                  STATE           VENDOR PRESET
+arp-ethers.service                         disabled        disabled
+atd.service                                enabled         enabled
+auditd.service                             enabled         enabled
+autovt@.service                            alias           -
+blk-availability.service                   disabled        disabled
+bolt.service                               static          -
+chrony-wait.service                        disabled        disabled
+chronyd.service                            enabled         enabled
+
+.....
+.....
+
+usb_modeswitch@.service                    static          -
+user-runtime-dir@.service                  static          -
+user@.service                              static          -
+
+194 unit files listed.
+
+
+2.Stop and turn OFF auto-start setting for a service if you don'd need it.
+For example, disable [nis-domainname] as an example below.
+
+[root@dlp ~]# systemctl stop nis-domainname
+[root@dlp ~]# systemctl disable nis-domainname
+# to disable and stop with a command, run like follows
+[root@dlp ~]# systemctl disable --now nis-domainname
+
+########################
+Initial Settings : Update System
+##########################
+	
+After CentOS Stream Server has been a production System, maybe it's difficult to update System,
+however, at least after Installing, Update CentOS Stream Server to the latest.
+1.For commands to updating System, it's possible to use [yum] or [dnf], but both are the link to [dnf-3], so you may use [yum] or [dnf] as you like.
+[root@dlp ~]# which yum
+/usr/bin/yum
+[root@dlp ~]# ll /usr/bin/yum
+lrwxrwxrwx. 1 root root 5 Aug 5 2020 /usr/bin/yum -> dnf-3
+[root@dlp ~]# which dnf
+/usr/bin/dnf
+[root@dlp ~]# ll /usr/bin/dnf
+lrwxrwxrwx. 1 root root 5 Oct 25 23:06 /usr/bin/dnf -> dnf-3
+[root@dlp ~]# ll /usr/bin/dnf-3
+-rwxr-xr-x. 1 root root 1942 Oct 25 23:06 /usr/bin/dnf-3
+# installed [yum] package
+[root@dlp ~]# rpm -q yum
+yum-4.10.0-1.el9.noarch
+[root@dlp ~]# rpm -ql yum
+/etc/dnf/protected.d/yum.conf
+/etc/yum.conf
+/etc/yum/pluginconf.d
+/etc/yum/protected.d
+/etc/yum/vars
+/usr/bin/yum
+/usr/share/man/man1/yum-aliases.1.gz
+/usr/share/man/man5/yum.conf.5.gz
+/usr/share/man/man8/yum-shell.8.gz
+/usr/share/man/man8/yum.8.gz
+
+# included files are all links to [dnf]
+[root@dlp ~]# ll /etc/yum.conf /etc/yum/vars /etc/yum/pluginconf.d
+lrwxrwxrwx. 1 root root 12 Oct 25 23:06 /etc/yum.conf -> dnf/dnf.conf
+lrwxrwxrwx. 1 root root 14 Oct 25 23:06 /etc/yum/pluginconf.d -> ../dnf/plugins
+lrwxrwxrwx. 1 root root 11 Oct 25 23:06 /etc/yum/vars -> ../dnf/vars
+
+
+2.Update CentOS Stream Server like follows.
+[root@dlp ~]# dnf -y upgrade
+CentOS Stream 9 - BaseOS                        7.2 kB/s | 8.1 kB     00:01
+CentOS Stream 9 - BaseOS                        242 kB/s | 1.7 MB     00:07
+CentOS Stream 9 - AppStream                      26 kB/s | 8.2 kB     00:00
+CentOS Stream 9 - AppStream                     1.3 MB/s | 9.7 MB     00:07
+Dependencies resolved.
+================================================================================
+ Package                         Arch     Version             Repository   Size
+================================================================================
+Installing:
+ kernel                          x86_64   5.14.0-30.el9       baseos      158 k
+Upgrading:
+ NetworkManager                  x86_64   1:1.36.0-0.2.el9    baseos      2.2 M
+ NetworkManager-config-server    noarch   1:1.36.0-0.2.el9    baseos       13 k
+ NetworkManager-libnm            x86_64   1:1.36.0-0.2.el9    baseos      1.7 M
+ NetworkManager-team             x86_64   1:1.36.0-0.2.el9    baseos       31 k
+ NetworkManager-tui              x86_64   1:1.36.0-0.2.el9    baseos      225 k
+ bind-libs                       x86_64   32:9.16.23-1.el9    appstream   1.2 M
+ bind-license                    noarch   32:9.16.23-1.el9    appstream    16 k
+ bind-utils                      x86_64   32:9.16.23-1.el9    appstream   210 k
+ binutils                        x86_64   2.35.2-13.el9       baseos      5.6 M
+ binutils-gold                   x86_64   2.35.2-13.el9       baseos      739 k
+ bpftool                         x86_64   5.14.0-30.el9       baseos      887 k
+ cockpit                         x86_64   259-1.el9           baseos       45 k
+ cockpit-bridge                  x86_64   259-1.el9           baseos      492 k
+ cockpit-packagekit              noarch   259-1.el9           appstream   588 k
+ cockpit-podman                  noarch   38-1.el9            appstream   472 k
+ cockpit-storaged                noarch   259-1.el9           appstream   587 k
+ cockpit-system                  noarch   259-1.el9           baseos      3.2 M
+ cockpit-ws                      x86_64   259-1.el9           baseos      1.3 M
+.....
+.....
+
+#####################
+Initial Settings : Use Moduler Repository
+########################################
+This is how to use Moduler Repository.
+
+1.Display available modules.
+[root@dlp ~]# dnf module list
+CentOS Stream 9 - AppStream
+Name       Stream Profiles               Summary
+maven      3.8    common [d]             Java project management and project com
+                                         prehension tool
+nginx      1.22   common [d]             nginx webserver
+
+.....
+.....
+
+postgresql 15     client, server [d]     PostgreSQL server and client module
+redis      7      common [d]             Redis persistent key-value database
+ruby       3.1    common [d]             An interpreter of object-oriented scrip
+                                         ting language
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+
+2.For installing available modules, Configure like follows.
+# for example, display [Node.js] modules
+[root@dlp ~]# dnf module list nodejs
+CentOS Stream 9 - AppStream
+Name      Stream    Profiles                                Summary
+nodejs    18        common [d], development, minimal, s2i   Javascript runtime
+nodejs    20        common [d], development, minimal, s2i   Javascript runtime
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+
+# install Node.js 18
+[root@dlp ~]# dnf module -y install nodejs:18
+Dependencies resolved.
+========================================================================================
+ Package            Arch    Version                                     Repo        Size
+========================================================================================
+Installing group/module packages:
+ nodejs             x86_64  1:18.14.2-2.module_el9+307+7e5e4074         appstream   12 M
+ npm                x86_64  1:9.5.0-1.18.14.2.2.module_el9+307+7e5e4074 appstream  2.5 M
+Installing weak dependencies:
+ nodejs-docs        noarch  1:18.14.2-2.module_el9+307+7e5e4074         appstream  7.6 M
+ nodejs-full-i18n   x86_64  1:18.14.2-2.module_el9+307+7e5e4074         appstream  8.4 M
+Installing module profiles:
+ nodejs/common
+Enabling module streams:
+ nodejs                     18
+
+Transaction Summary
+========================================================================================
+Install  4 Packages
+.....
+.....
+
+# state of [Node.js 18] turns to [e]nabled and [i]nstalled
+[root@dlp ~]# dnf module list nodejs
+CentOS Stream 9 - AppStream
+Name     Stream   Profiles                                   Summary
+nodejs   18 [e]   common [d] [i], development, minimal, s2i  Javascript runtime
+nodejs   20       common [d], development, minimal, s2i      Javascript runtime
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+
+[root@dlp ~]# node -v
+v18.14.2
+
+3.If you would like to change to another version of installed module, Configure like follows.
+For example, Switch to Node.js 20 from Node.js 18 that was installed on [2] above.
+
+[root@dlp ~]# dnf module list nodejs
+CentOS Stream 9 - AppStream
+Name     Stream   Profiles                                   Summary
+nodejs   18 [e]   common [d] [i], development, minimal, s2i  Javascript runtime
+nodejs   20       common [d], development, minimal, s2i      Javascript runtime
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+
+# reset first to switch
+[root@dlp ~]# dnf module -y reset nodejs
+# install Node.js 20
+[root@dlp ~]# dnf module -y install nodejs:20
+Dependencies resolved.
+=======================================================================================
+ Package            Arch    Version                                    Repo        Size
+=======================================================================================
+Upgrading:
+ nodejs             x86_64  1:20.5.1-1.module_el9+642+c81e94f6         appstream   14 M
+ nodejs-docs        noarch  1:20.5.1-1.module_el9+642+c81e94f6         appstream  8.0 M
+ nodejs-full-i18n   x86_64  1:20.5.1-1.module_el9+642+c81e94f6         appstream  8.5 M
+ npm                x86_64  1:9.8.0-1.20.5.1.1.module_el9+642+c81e94f6 appstream  2.6 M
+Installing module profiles:
+ nodejs/common
+Enabling module streams:
+ nodejs                     20
+
+Transaction Summary
+=======================================================================================
+Upgrade  4 Packages
+.....
+.....
+
+# state of [Node.js 20] turns to [e]nabled
+[root@dlp ~]# dnf module list nodejs
+CentOS Stream 9 - AppStream
+Name     Stream   Profiles                                   Summary
+nodejs   18       common [d], development, minimal, s2i      Javascript runtime
+nodejs   20 [e]   common [d] [i], development, minimal, s2i  Javascript runtime
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+
+[root@dlp ~]# node -v
+v20.5.1
+
+#######################################
+Initial Settings : Add Additional Repositories
+#############################################
+
+	
+Add some useful external repositories to install useful softwares.
+1.Add EPEL that Fedora project provides packages which are specially built for RHEL.
+⇒ https://fedoraproject.org/wiki/EPEL
+
+[root@dlp ~]# dnf -y install epel-release epel-next-release
+[root@dlp ~]# vi /etc/yum.repos.d/epel.repo
+[epel]
+name=Extra Packages for Enterprise Linux $releasever - $basearch
+# It is much more secure to use the metalink, but if you wish to use a local mirr
+ror
+# place its address here.
+#baseurl=https://download.example/pub/epel/$releasever/Everything/$basearch/
+metalink=https://mirrors.fedoraproject.org/metalink?repo=epel-$releasever&arch=$$
+basearch&infra=$infra&content=$contentdir
+# [enabled=1] = repository enabled, [enabled=0] = repository disabled
+enabled=1
+# to add [priority=*], it can set priority to repository
+# it can specify [1-99], [1] is highest, default without the line is [99]
+priority=10
+gpgcheck=1
+countme=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-$releasever
+
+.....
+.....
+
+# set EPEL Next, too, for your needs
+[root@dlp ~]# vi /etc/yum.repos.d/epel-next.repo
+[epel-next]
+name=Extra Packages for Enterprise Linux $releasever - Next - $basearch
+# It is much more secure to use the metalink, but if you wish to use a local mirror
+# place its address here.
+#baseurl=https://download.example/pub/epel/next/$releasever/Everything/$basearch/
+metalink=https://mirrors.fedoraproject.org/metalink?repo=epel-next-$releasever&arch=$basearch&infra=$infra&content=$contentdir
+
+.....
+.....
+
+# if disabling with [enabled=0] regulary but want to enable it temporary, run like follows
+[root@dlp ~]# dnf --enablerepo=epel,epel-next install [Package]
+
+2.Add Remi's RPM repository that provides useful packages like latest PHP and so on.
+⇒ https://rpms.remirepo.net/
+
+[root@dlp ~]# dnf -y install https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+# included repository files
+[root@dlp ~]# rpm -ql remi-release
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi.el9
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi2017
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi2018
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi2019
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi2020
+/etc/pki/rpm-gpg/RPM-GPG-KEY-remi2021
+/etc/yum.repos.d/remi-modular.repo
+/etc/yum.repos.d/remi-safe.repo
+/etc/yum.repos.d/remi.repo
+/opt/remi
+
+# only [remi-safe] and [remi-modular] are enabled by default
+[root@dlp ~]# grep 'enabled=1' /etc/yum.repos.d/remi-*
+/etc/yum.repos.d/remi-modular.repo:enabled=1
+/etc/yum.repos.d/remi-safe.repo:enabled=1
+[root@dlp ~]# vi /etc/yum.repos.d/remi-safe.repo
+[remi-safe]
+name=Safe Remi's RPM repository for Enterprise Linux 9 - $basearch
+#baseurl=http://rpms.remirepo.net/enterprise/9/safe/$basearch/
+#mirrorlist=https://rpms.remirepo.net/enterprise/9/safe/$basearch/httpsmirror
+mirrorlist=http://cdn.remirepo.net/enterprise/9/safe/$basearch/mirror
+# [enabled=1] = repository enabled, [enabled=0] = repository disabled
+enabled=1
+# to add [priority=*], it can set priority to repository
+# it can specify [1-99], [1] is highest, default without the line is [99]
+priority=10
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-remi.el9
+
+.....
+.....
+
+# if disabling with [enabled=0] regulary but want to enable it temporary, run like follows
+[root@dlp ~]# dnf --enablerepo=remi-safe install [Package]
+# also possible to use Moduler Repository
+[root@dlp ~]# dnf --enablerepo=remi-modular --disablerepo=appstream module list
+Remi's Modular repository for Enterprise Linux 9 - x86_64
+Name      Stream   Profiles                    Summary
+composer  2 [d]    common [d]                  Dependency Manager for PHP
+memcached remi     common [d]                  High Performance, Distributed Memory Object Cache
+php       remi-7.4 common [d], devel, minimal  PHP scripting language
+php       remi-8.0 common [d], devel, minimal  PHP scripting language
+php       remi-8.1 common [d], devel, minimal  PHP scripting language
+redis     remi-5.0 common [d]                  Redis persistent key-value database
+redis     remi-6.0 common [d]                  Redis persistent key-value database
+redis     remi-6.2 common [d]                  Redis persistent key-value database
+
+Hint: [d]efault, [e]nabled, [x]disabled, [i]nstalled
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

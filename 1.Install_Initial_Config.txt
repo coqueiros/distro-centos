@@ -1,0 +1,170 @@
+#This is the configuration examples for Rocky Linux 8 released on 21 June 2021 that is compatible with Red Hat Enterprise Linux 8.
+CentOS Linux 8 will be end at the end of 2021, so founder of the CentOS project starts a new Rocky Linux project.
+Rocky Linux is a community enterprise operating system designed to be 100% bug-for-bug compatible with Red Hat Enterprise Linux.
+
+#Step1:Download the Rocky Linux 8.5 ISO file for installation from the following site.
+⇒ https://download.rockylinux.org/pub/rocky/8/isos/x86_64/
+
+##Rocky Linux 8 : Create an Installation Disk
+ 	
+#After downloading ISO of Rocky Linux 8, Burn it to a DVD with a burning application to create an installation disk.
+#If you create it with the feature of Windows 8/10, refer to follows.
+
+#Step1:Insert an empty DVD media in DVD drive. Next, right-click the ISO image of Rocky Linux and select [Burn Disk image] in the menu.
+#Step2:Click [Burn] button and start burning.
+#Step3:After finishing burning, eject the disk and proceed to the installation step.
+
+
+[15]	After restarting computer, login prompt is shown like follows. Login with root user or a common user you set during the installation. If logined normally, CentOS Stream Installation successfully finished.
+
+CentOS Stream 9
+Kernel 5.14.0-17.el9.x86_64 on an x86_64
+
+#Activate the web console with: systemctl enable --now cockpit.socket
+
+localhost login:
+
+######################
+Initial Settings : Add User Accounts
+#############################
+To add user accounts on CentOS Stream Server, Configure like follows.
+
+1.For example, Add [centos] user.
+[root@localhost ~]# useradd centos
+[root@localhost ~]# passwd centos
+Changing password for user centos.
+New UNIX password:              # input any password you'd like to set
+Retype new UNIX password:       # confirm
+passwd: all authentication tokens updated successfully.
+
+2.If you'd like to switch to root account from a user added above, use [su] command to do so.
+localhost login: centos         # login username
+password:                       # input user password
+[centos@localhost ~]$ su -      # switch to root
+Password:                       # input root password
+[root@localhost ~]#             # just switched to root
+
+3.If you'd like to limit users to run [su] command, configure like follows.
+On the example below, only users in [wheel] group can run [su] command.
+
+[root@localhost ~]# usermod -aG wheel centos
+[root@localhost ~]# vi /etc/pam.d/su
+#%PAM-1.0
+auth            sufficient      pam_rootok.so
+# Uncomment the following line to implicitly trust users in the "wheel" group.
+#auth           sufficient      pam_wheel.so trust use_uid
+# Uncomment the following line to require a user to be in the "wheel" group.
+# uncomment the following line
+auth            required        pam_wheel.so use_uid
+auth            substack        system-auth
+auth            include         postlogin
+account         sufficient      pam_succeed_if.so uid = 0 use_uid quiet
+account         include         system-auth
+password        include         system-auth
+session         include         system-auth
+session         include         postlogin
+session         optional        pam_xauth.so
+
+# verify settings with a user who is not in allowed group
+[redhat@localhost ~]$ su -
+Password:
+su: Permission denied     # denied normally
+
+4.If you'd like to remove a user accounts, Set like follows.
+
+# remove a user [centos] (only removed user account)
+[root@localhost ~]# userdel centos
+
+# remove a user [centos] (removed user account and his home directory both)
+[root@localhost ~]# userdel -r centos
+
+
+
+##########################
+Initial Settings : Firewall
+###########################
+
+Configure Firewall and SELinux.
+1.It's possible to display FireWall Service Status like follows. (enabled by default)
+
+[root@localhost ~]# systemctl status firewalld
+*  firewalld.service - firewalld - dynamic firewall daemon
+     Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor>
+     Active: active (running) since Fri 2021-11-25 20:29:20 JST; 5min ago
+       Docs: man:firewalld(1)
+   Main PID: 710 (firewalld)
+      Tasks: 2 (limit: 4419)
+     Memory: 41.6M
+        CPU: 427ms
+     CGroup: /system.slice/firewalld.service
+             +- 710 /usr/bin/python3 -s /usr/sbin/firewalld --nofork --nopid
+
+# [Active: active (running) ***] means firewalld is running now
+
+2.If you use FireWall service, it needs to modify FireWall settings manually because incoming requests for services are mostly not allowed by default.
+Refer to here for basic Firewall operation and settins.
+
+Configuration examples of CentOS Stream 9 on this site are based on the environment Firewalld service is always enabled.
+
+3.If you don't need FireWall service because of some reasons like that some FireWall Machines are running in your Local Netowrk or others, it's possible to stop and disable FireWall service on CentOS Stream server like follows.
+# stop service
+[root@localhost ~]# systemctl stop firewalld
+# disable service
+[root@localhost ~]# systemctl disable firewalld
+Removed /etc/systemd/system/multi-user.target.wants/firewalld.service.
+Removed /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service.
+
+#########################
+Initial Settings : SELinux
+#########################
+4.It's possible to display current SELinux (Security-Enhanced Linux) Status like follows. (enabled by default)
+[root@localhost ~]# getenforce
+Enforcing     # SELinux is enabled
+
+5.If you enable SELinux, there are cases to modify SELinux policies manually because sometimes SELinux stops applications.
+Refer to here for basic SELinux operation and settins.
+
+Configuration examples of CentOS Stream 9 on this site are based on the environment SELinux is always Enforcing.
+
+6If you don't need SELinux feature because of some reasons like that your server is running only in Local safety Network or others, it's possible to disable SELinux like follows.
+
+# disable SELinux
+[root@localhost ~]# grubby --update-kernel ALL --args selinux=0
+# apply changes to restart computer
+[root@localhost ~]# reboot
+# if falling back to enable, run like follows
+[root@localhost ~]# grubby --update-kernel ALL --remove-args selinux
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

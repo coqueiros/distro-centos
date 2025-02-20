@@ -1,0 +1,31 @@
+[root@rgl ~]# sudo firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: ens160
+  sources:
+  services: cockpit dhcpv6-client git http ssh
+  ports: 53/tcp 53/udp
+  protocols:
+  forward: no
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
+
+#
+Se necessário, adicione uma regra para permitir o tráfego DNS (porta 53):
+sudo firewall-cmd --permanent --add-port=53/tcp
+sudo firewall-cmd --permanent --add-port=53/udp
+sudo firewall-cmd --reload
+
+#Verificar o arquivo /etc/resolv.conf: Certifique-se de que o arquivo /etc/resolv.conf no cliente esteja apontando para o servidor DNS correto (192.168.232.166 ou outro IP do dnsmasq):
+nameserver 192.168.232.166
+
+#Limpar o cache de DNS: Para garantir que você não esteja consultando uma versão antiga em cache, limpe o cache local do DNS e reinicie o serviço:
+sudo systemctl restart dnsmasq
+
+#Verificar o arquivo de logs do dnsmasq: Se o erro persistir, verifique o log do dnsmasq para ver se há algum erro durante a configuração ou a tentativa de resolver o PTR:
+sudo tail -f /var/log/messages | grep dnsmasq
+
